@@ -492,10 +492,10 @@
           <span class="ctrl-value" id="v-harga">Rp 12.500</span>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <input type="range" id="s-harga" min="1" max="833333" step="1" value="12500" oninput="syncHargaFromSlider()" style="flex:1;margin-bottom:0">
-          <input type="number" id="n-harga" min="1" max="833333" value="12500" oninput="syncHargaFromInput()" style="width:88px;font-family:var(--font-mono);font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;outline:none;-moz-appearance:textfield">
+          <input type="range" id="s-harga" min="1" max="10000000" step="1" value="12500" oninput="syncHargaFromSlider()" style="flex:1;margin-bottom:0">
+          <input type="number" id="n-harga" min="1" max="10000000" value="12500" oninput="syncHargaFromInput()" style="width:88px;font-family:var(--font-mono);font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;outline:none;-moz-appearance:textfield">
         </div>
-        <div class="slider-minmax"><span>1</span><span>833.333/m²</span></div>
+        <div class="slider-minmax"><span>1</span><span>10 jt/m²</span></div>
       </div>
 
       <div class="control-group">
@@ -657,7 +657,16 @@
     </div>
   </div>
 
-  <div class="footer">simulasi-sewa-lahan-bandung.html &mdash; data estimasi, bukan saran investasi resmi</div>
+  <div class="footer">
+    <div style="margin-bottom:6px;font-size:12px;color:var(--muted)">
+      Simulasi Sewa Lahan Komersil · Kota Bandung · data estimasi, bukan saran investasi resmi
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:4px">
+      <span style="color:var(--accent);font-size:13px;font-weight:500">© <span id="footer-year"></span> Trio As'cholani. All Rights Reserved.</span>
+      <span style="color:var(--subtle)">·</span>
+      <a href="mailto:trioascholani@gmail.com" style="color:var(--muted);text-decoration:none;font-size:12px">trioascholani@gmail.com</a>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -667,6 +676,7 @@
   document.getElementById('timestamp').textContent =
     now.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) + ' · ' +
     now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('footer-year').textContent = now.getFullYear();
 
   let ch1, ch2;
 
@@ -701,7 +711,7 @@
   function syncHargaFromInput() {
     let v = +document.getElementById('n-harga').value;
     if (isNaN(v) || v < 1) v = 1;
-    if (v > 833333) v = 833333;
+    if (v > 10000000) v = 10000000;
     document.getElementById('s-harga').value = v;
     update();
   }
