@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulasi Sewa Lahan Komersil — Kota Bandung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --surface: #14171c;
+    --surface2: #1c2028;
+    --surface3: #232830;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.14);
+    --text: #e8e6e0;
+    --muted: #7a7870;
+    --subtle: #3a3d45;
+    --accent: #c8f04a;
+    --accent-dim: rgba(200,240,74,0.12);
+    --accent-glow: rgba(200,240,74,0.25);
+    --blue: #4a9eff;
+    --blue-dim: rgba(74,158,255,0.12);
+    --red: #ff6b6b;
+    --red-dim: rgba(255,107,107,0.12);
+    --amber: #ffb547;
+    --amber-dim: rgba(255,181,71,0.12);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.12);
+    --font-display: 'DM Serif Display', serif;
+    --font-body: 'Outfit', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: .5;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 48px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .header-left {}
+  .label-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(200,240,74,0.2);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 99px;
+    margin-bottom: 16px;
+  }
+  .label-pill::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 400;
+    line-height: 1.15;
+    color: var(--text);
+    letter-spacing: -.01em;
+  }
+  h1 em { color: var(--accent); font-style: italic; }
+  .subtitle {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 300;
+  }
+  .last-updated {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    align-self: flex-end;
+  }
+
+  /* Layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media(max-width:900px){ .main-grid { grid-template-columns: 1fr; } }
+
+  /* Control Panel */
+  .control-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    position: sticky;
+    top: 24px;
+  }
+  .panel-title {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .control-group {
+    margin-bottom: 28px;
+  }
+  .control-group:last-child { margin-bottom: 0; }
+
+  .ctrl-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .ctrl-label {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .ctrl-value {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 3px 10px;
+    border-radius: 6px;
+    min-width: 110px;
+    text-align: right;
+  }
+
+  /* Custom Slider */
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--subtle);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-dim);
+    cursor: pointer;
+    transition: box-shadow .15s;
+  }
+  input[type=range]:hover::-webkit-slider-thumb {
+    box-shadow: 0 0 0 6px var(--accent-glow);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+  }
+
+  .slider-minmax {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--subtle);
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  .quick-presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+  .preset-btn {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .preset-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  /* Right column */
+  .results { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Metric cards */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  @media(max-width:600px){ .metrics-row { grid-template-columns: 1fr 1fr; } }
+
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: border-color .2s;
+  }
+  .metric-card:hover { border-color: var(--border-hover); }
+  .metric-card.accent-card {
+    border-color: rgba(200,240,74,0.2);
+    background: linear-gradient(135deg, var(--surface) 60%, rgba(200,240,74,0.04));
+  }
+  .mc-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .mc-value {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .metric-card.accent-card .mc-value { color: var(--accent); }
+  .mc-sub {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Section cards */
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .sc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sc-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .sc-body { padding: 20px 24px; }
+
+  /* Table */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  .data-table thead th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 12px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr:hover td { background: var(--surface2); }
+  .data-table .total-row td {
+    border-top: 1px solid var(--border-hover);
+    color: var(--text);
+    font-weight: 500;
+    font-size: 13px;
+    background: var(--surface2);
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-family: var(--font-mono);
+  }
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-amber { background: var(--amber-dim); color: var(--amber); }
+  .badge-red   { background: var(--red-dim); color: var(--red); }
+  .badge-blue  { background: var(--blue-dim); color: var(--blue); }
+  .badge-accent{ background: var(--accent-dim); color: var(--accent); }
+
+  /* Chart container */
+  .chart-wrap { position: relative; width: 100%; height: 240px; }
+
+  /* Highlight boxes */
+  .insight {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    border: 1px solid;
+  }
+  .insight:last-child { margin-bottom: 0; }
+  .insight-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .insight-g { background: var(--green-dim); border-color: rgba(74,222,128,.2); color: var(--green); }
+  .insight-a { background: var(--amber-dim); border-color: rgba(255,181,71,.2); color: var(--amber); }
+  .insight-b { background: var(--blue-dim); border-color: rgba(74,158,255,.2); color: var(--blue); }
+  .insight strong { font-weight: 600; display: block; margin-bottom: 2px; }
+
+  /* Skema comparison */
+  .skema-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 20px 24px;
+  }
+  @media(max-width:600px){ .skema-grid { grid-template-columns: 1fr; } }
+  .skema-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    transition: border-color .2s;
+  }
+  .skema-card.recommended {
+    border-color: rgba(200,240,74,0.35);
+    background: linear-gradient(135deg, var(--surface2), rgba(200,240,74,0.04));
+  }
+  .skema-label { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; font-weight: 500; }
+  .skema-amount { font-family: var(--font-mono); font-size: 17px; font-weight: 500; color: var(--text); margin-bottom: 6px; line-height: 1.2; }
+  .skema-total { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+
+  /* Footer watermark */
+  .footer {
+    margin-top: 60px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--subtle);
+    font-family: var(--font-mono);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--subtle); border-radius: 99px; }
+
+  /* Progress bar for beban */
+  .progress-track {
+    height: 4px;
+    background: var(--subtle);
+    border-radius: 99px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width .4s ease;
+  }
+
+  .section-tag {
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="label-pill">Simulasi Investasi Aktif</div>
+      <h1>Kalkulator Sewa<br>Lahan <em>Komersil</em></h1>
+      <p class="subtitle">Kota Bandung · Jalan Kolektor · Kontrak 10 Tahun · Bayar Per Tahun</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end">
+      <div class="last-updated" id="timestamp"></div>
+      <button onclick="downloadPDF()" id="pdf-btn" style="display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:12px;font-weight:500;padding:10px 18px;border-radius:8px;border:1px solid rgba(200,240,74,0.4);background:rgba(200,240,74,0.1);color:#c8f04a;cursor:pointer;transition:all .15s;white-space:nowrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Unduh laporan PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- LEFT: Control Panel -->
+    <div class="control-panel">
+      <div class="panel-title">Parameter</div>
+
+      <div class="control-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Luas lahan</span>
+          <span class="ctrl-value" id="v-luas">700 m²</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <input type="range" id="s-luas" min="1" max="10000" step="1" value="700" oninput="syncLuasFromSlider()" style="flex:1;margin-bottom:0">
+          <input type="number" id="n-luas" min="1" max="10000" value="700" oninput="syncLuasFromInput()" style="width:72px;font-family:var(--font-mono);font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;outline:none;-moz-appearance:textfield">
+        </div>
+        <div class="slider-minmax"><span>1 m²</span><span>10.000 m²</span></div>
+      </div>
+
+      <div class="control-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Harga sewa / m² / bulan</span>
+          <span class="ctrl-value" id="v-harga">Rp 12.500</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <input type="range" id="s-harga" min="1" max="833333" step="1" value="12500" oninput="syncHargaFromSlider()" style="flex:1;margin-bottom:0">
+          <input type="number" id="n-harga" min="1" max="833333" value="12500" oninput="syncHargaFromInput()" style="width:88px;font-family:var(--font-mono);font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;outline:none;-moz-appearance:textfield">
+        </div>
+        <div class="slider-minmax"><span>1</span><span>833.333/m²</span></div>
+      </div>
+
+      <div class="control-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Kenaikan sewa / tahun</span>
+          <span class="ctrl-value" id="v-naik">5%</span>
+        </div>
+        <input type="range" id="s-naik" min="0" max="10" step="1" value="5" oninput="update()">
+        <div class="slider-minmax"><span>0%</span><span>10%</span></div>
+      </div>
+
+      <div class="control-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Pendapatan bisnis / bulan</span>
+          <span class="ctrl-value" id="v-rev">Rp 9,9 jt</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <input type="range" id="s-rev" min="1" max="900000000" step="1" value="9900000" oninput="syncRevFromSlider()" style="flex:1;margin-bottom:0">
+          <input type="number" id="n-rev" min="1" max="900000000" value="9900000" oninput="syncRevFromInput()" style="width:88px;font-family:var(--font-mono);font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;outline:none;-moz-appearance:textfield">
+        </div>
+        <div class="slider-minmax"><span>1</span><span>900 jt</span></div>
+      </div>
+
+      <div class="control-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">IPL / m² / bulan</span>
+          <span class="ctrl-value" id="v-ipl">Rp 5.000</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <input type="range" id="s-ipl" min="0" max="50000" step="1" value="5000" oninput="syncIplFromSlider()" style="flex:1;margin-bottom:0">
+          <input type="number" id="n-ipl" min="0" max="50000" value="5000" oninput="syncIplFromInput()" style="width:72px;font-family:var(--font-mono);font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;outline:none;-moz-appearance:textfield">
+        </div>
+        <div class="slider-minmax"><span>0</span><span>50.000/m²</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">Iuran Pengelolaan Lingkungan — biaya bulanan di luar sewa</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="panel-title">Preset lokasi</div>
+      <div class="quick-presets">
+        <button class="preset-btn" onclick="applyPreset(500,6667,5,9900000)">Pinggiran BDG</button>
+        <button class="preset-btn" onclick="applyPreset(700,12500,6,15000000)">Kolektor</button>
+        <button class="preset-btn" onclick="applyPreset(600,20833,7,25000000)">Jl. Utama</button>
+        <button class="preset-btn" onclick="applyPreset(1000,33333,8,40000000)">Pusat Kota</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="panel-title">Kelayakan th-1</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Beban sewa vs pendapatan</div>
+      <div style="font-family:var(--font-mono);font-size:22px;font-weight:500" id="ratio-val">—</div>
+      <div class="progress-track"><div class="progress-fill" id="ratio-bar" style="width:0%;background:var(--green)"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px" id="ratio-label">—</div>
+    </div>
+
+    <!-- RIGHT: Results -->
+    <div class="results">
+
+      <!-- Metrics row -->
+      <div class="metrics-row">
+        <div class="metric-card accent-card">
+          <div class="mc-label">Sewa tahun ke-1</div>
+          <div class="mc-value" id="m-sewa1">—</div>
+          <div class="mc-sub" id="m-sewa1-sub">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">IPL / bulan (total lahan)</div>
+          <div class="mc-value" id="m-ipl">—</div>
+          <div class="mc-sub" id="m-ipl-sub">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Total beban 10 tahun</div>
+          <div class="mc-value" id="m-total">—</div>
+          <div class="mc-sub" id="m-total-sub">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label">Sewa tahun ke-10</div>
+          <div class="mc-value" id="m-sewa10">—</div>
+          <div class="mc-sub">setelah eskalasi</div>
+        </div>
+        <div class="metric-card" style="grid-column:span 2; border:1px solid rgba(200,240,74,0.25); background:linear-gradient(135deg,#14171c 60%,rgba(200,240,74,0.04))">
+          <div class="mc-label">Total sewa 10 tahun</div>
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <div class="mc-value" id="m-totalsewa" style="font-size:28px;color:#c8f04a">—</div>
+            <div style="font-size:12px;color:#7a7870;font-family:var(--font-mono)" id="m-totalsewa-full">—</div>
+          </div>
+          <div style="display:flex;gap:20px;margin-top:8px;flex-wrap:wrap" id="m-totalsewa-breakdown"></div>
+        </div>
+        <div class="metric-card" style="grid-column:span 2">
+          <div class="mc-label">Ekuivalen bulan kerja (sewa + IPL)</div>
+          <div class="mc-value" id="m-bep">—</div>
+          <div class="mc-sub">dari pendapatan bisnis</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="section-card">
+        <div class="sc-header">
+          <span class="sc-title">Akumulasi biaya sewa vs pendapatan (10 tahun)</span>
+          <div style="display:flex;gap:12px;font-size:11px;color:var(--muted);align-items:center">
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:2px;background:#c8f04a;display:inline-block;border-radius:2px"></span>Pendapatan</span>
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:2px;background:#ff6b6b;display:inline-block;border-radius:2px"></span>Biaya sewa</span>
+          </div>
+        </div>
+        <div class="sc-body">
+          <div class="chart-wrap"><canvas id="chart1"></canvas></div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="sc-header">
+          <span class="sc-title">Beban sewa sebagai % pendapatan per tahun</span>
+          <span class="section-tag">Ideal &lt; 20%</span>
+        </div>
+        <div class="sc-body">
+          <div class="chart-wrap" style="height:180px"><canvas id="chart2"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="section-card">
+        <div class="sc-header">
+          <span class="sc-title">Rincian sewa & proyeksi per tahun</span>
+          <span class="section-tag">10 tahun</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tahun</th>
+                <th>Sewa/tahun</th>
+                <th>Naik</th>
+                <th>IPL/tahun</th>
+                <th>Akum. beban</th>
+                <th>Pendapatan</th>
+                <th>Beban %</th>
+                <th>Sisa laba est.</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Skema pembayaran -->
+      <div class="section-card">
+        <div class="sc-header">
+          <span class="sc-title">Perbandingan skema pembayaran</span>
+        </div>
+        <div class="skema-grid" id="skema-grid"></div>
+      </div>
+
+      <!-- Insights -->
+      <div class="section-card">
+        <div class="sc-header"><span class="sc-title">Analisis & rekomendasi</span></div>
+        <div class="sc-body" id="insights"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">simulasi-sewa-lahan-bandung.html &mdash; data estimasi, bukan saran investasi resmi</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  // Timestamp
+  const now = new Date();
+  document.getElementById('timestamp').textContent =
+    now.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) + ' · ' +
+    now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+
+  let ch1, ch2;
+
+  const idr = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+  const jt  = n => {
+    if(n >= 1e9) return 'Rp ' + (n/1e9).toFixed(2) + ' M';
+    if(n >= 1e6) return 'Rp ' + (n/1e6).toFixed(1) + ' jt';
+    return idr(n);
+  };
+  const pct = n => n.toFixed(1) + '%';
+
+  function syncLuasFromSlider() {
+    const v = +document.getElementById('s-luas').value;
+    document.getElementById('n-luas').value = v;
+    update();
+  }
+
+  function syncLuasFromInput() {
+    let v = +document.getElementById('n-luas').value;
+    if (isNaN(v) || v < 1) v = 1;
+    if (v > 10000) v = 10000;
+    document.getElementById('s-luas').value = v;
+    update();
+  }
+
+  function syncHargaFromSlider() {
+    const v = +document.getElementById('s-harga').value;
+    document.getElementById('n-harga').value = v;
+    update();
+  }
+
+  function syncHargaFromInput() {
+    let v = +document.getElementById('n-harga').value;
+    if (isNaN(v) || v < 1) v = 1;
+    if (v > 833333) v = 833333;
+    document.getElementById('s-harga').value = v;
+    update();
+  }
+
+  function syncRevFromSlider() {
+    const v = +document.getElementById('s-rev').value;
+    document.getElementById('n-rev').value = v;
+    update();
+  }
+
+  function syncRevFromInput() {
+    let v = +document.getElementById('n-rev').value;
+    if (isNaN(v) || v < 1) v = 1;
+    if (v > 900000000) v = 900000000;
+    document.getElementById('s-rev').value = v;
+    update();
+  }
+
+  function syncIplFromSlider() {
+    const v = +document.getElementById('s-ipl').value;
+    document.getElementById('n-ipl').value = v;
+    update();
+  }
+
+  function syncIplFromInput() {
+    let v = +document.getElementById('n-ipl').value;
+    if (isNaN(v) || v < 0) v = 0;
+    if (v > 50000) v = 50000;
+    document.getElementById('s-ipl').value = v;
+    update();
+  }
+
+  function applyPreset(luas, harga, naik, rev) {
+    document.getElementById('s-luas').value = luas;
+    document.getElementById('n-luas').value = luas;
+    document.getElementById('s-harga').value = harga;
+    document.getElementById('n-harga').value = harga;
+    document.getElementById('s-naik').value = naik;
+    document.getElementById('s-rev').value = rev;
+    document.getElementById('n-rev').value = rev;
+    update();
+  }
+
+  function update() {
+    const luas  = +document.getElementById('s-luas').value;
+    const harga = +document.getElementById('s-harga').value;
+    const naik  = +document.getElementById('s-naik').value / 100;
+    const rev   = +document.getElementById('s-rev').value;
+    const ipl   = +document.getElementById('s-ipl').value;
+    const iplBulan = ipl * luas;
+    const iplTahun = iplBulan * 12;
+
+    // Update displays
+    document.getElementById('v-luas').textContent  = luas.toLocaleString('id-ID') + ' m²';
+    document.getElementById('v-harga').textContent = 'Rp ' + harga.toLocaleString('id-ID');
+    document.getElementById('v-naik').textContent  = (naik * 100).toFixed(0) + '%';
+    document.getElementById('v-rev').textContent   = jt(rev);
+    document.getElementById('v-ipl').textContent   = 'Rp ' + ipl.toLocaleString('id-ID');
+
+    // Compute rows
+    const sewa1 = luas * harga * 12;
+    const revTh  = rev * 12;
+    const ops    = 2800000 * 12;
+    let totalSewa = 0;
+    let totalIpl  = 0;
+    let rows = [];
+    let akumSewa = [], akumRev = [], pctArr = [], labels = [];
+
+    for (let y = 1; y <= 10; y++) {
+      const s   = Math.round(sewa1 * Math.pow(1 + naik, y - 1));
+      totalSewa += s;
+      totalIpl  += iplTahun;
+      const sisa = revTh - s - iplTahun - ops;
+      rows.push({ y, s, ipl: iplTahun, akum: totalSewa, rev: revTh, pct: (s + iplTahun) / revTh * 100, sisa });
+      akumSewa.push(+((totalSewa + totalIpl) / 1e6).toFixed(2));
+      akumRev.push(+(revTh * y / 1e6).toFixed(2));
+      pctArr.push(+((s + iplTahun) / revTh * 100).toFixed(1));
+      labels.push('Th ' + y);
+    }
+
+    const sewa10 = Math.round(sewa1 * Math.pow(1 + naik, 9));
+    const totalBeban = totalSewa + totalIpl;
+    const bepBln = Math.round(totalBeban / rev);
+    const avgPct = totalBeban / (revTh * 10) * 100;
+    const ratioPct = (sewa1 + iplTahun) / revTh * 100;
+
+    // Metrics
+    document.getElementById('m-sewa1').textContent     = jt(sewa1);
+    document.getElementById('m-sewa1-sub').textContent = idr(sewa1) + '/th';
+    document.getElementById('m-ipl').textContent       = jt(iplBulan);
+    document.getElementById('m-ipl-sub').textContent   = idr(iplBulan) + '/bln · ' + idr(iplTahun) + '/th';
+    document.getElementById('m-total').textContent     = jt(totalBeban);
+    document.getElementById('m-total-sub').textContent = 'Sewa + IPL 10 th';
+    document.getElementById('m-sewa10').textContent    = jt(sewa10);
+    document.getElementById('m-totalsewa').textContent  = jt(totalSewa);
+    document.getElementById('m-totalsewa-full').textContent = '= ' + Math.round(totalSewa).toLocaleString('id-ID') + ' (tanpa IPL)';
+    document.getElementById('m-totalsewa-breakdown').innerHTML = `
+      <span style="font-size:12px;color:#7a7870;font-family:var(--font-mono)">Sewa/tahun th-1: <span style="color:#e8e6e0">${idr(sewa1)}</span></span>
+      <span style="font-size:12px;color:#7a7870;font-family:var(--font-mono)">Sewa/tahun th-10: <span style="color:#e8e6e0">${idr(sewa10)}</span></span>
+      <span style="font-size:12px;color:#7a7870;font-family:var(--font-mono)">+ Total IPL: <span style="color:#e8e6e0">${idr(totalIpl)}</span></span>
+      <span style="font-size:12px;color:#c8f04a;font-family:var(--font-mono);font-weight:500">Sewa + IPL: <span>${idr(totalBeban)}</span></span>
+    `;
+    document.getElementById('m-bep').textContent       = bepBln + ' bln';
+
+    // Ratio
+    document.getElementById('ratio-val').textContent = pct(ratioPct);
+    const bar = document.getElementById('ratio-bar');
+    const clamp = Math.min(ratioPct, 50);
+    bar.style.width = (clamp / 50 * 100) + '%';
+    const ratioLabel = document.getElementById('ratio-label');
+    if (ratioPct < 15) {
+      bar.style.background = '#4ade80';
+      ratioLabel.textContent = 'Ringan — sangat layak';
+      ratioLabel.style.color = '#4ade80';
+    } else if (ratioPct < 25) {
+      bar.style.background = '#ffb547';
+      ratioLabel.textContent = 'Sedang — perlu monitor';
+      ratioLabel.style.color = '#ffb547';
+    } else {
+      bar.style.background = '#ff6b6b';
+      ratioLabel.textContent = 'Berat — tingkatkan volume!';
+      ratioLabel.style.color = '#ff6b6b';
+    }
+
+    // Table
+    let html = '';
+    rows.forEach((r, i) => {
+      const naik_s = i === 0 ? '—' : '+' + pct(naik * 100);
+      const bc = r.pct < 15 ? 'badge-green' : r.pct < 25 ? 'badge-amber' : 'badge-red';
+      const sc = r.sisa > 0 ? '#4ade80' : '#ff6b6b';
+      html += `<tr>
+        <td><span class="badge badge-blue">Th ${r.y}</span></td>
+        <td>${idr(r.s)}</td>
+        <td style="color:var(--muted)">${naik_s}</td>
+        <td style="color:var(--muted)">${jt(r.ipl)}</td>
+        <td style="font-weight:500">${jt(r.akum)}</td>
+        <td>${jt(r.rev)}</td>
+        <td><span class="badge ${bc}">${pct(r.pct)}</span></td>
+        <td style="color:${sc};font-weight:500">${r.sisa >= 0 ? '+' : ''}${jt(r.sisa)}</td>
+      </tr>`;
+    });
+    const totalLaba = revTh * 10 - totalSewa - totalIpl - ops * 10;
+    html += `<tr class="total-row">
+      <td colspan="3" style="font-family:var(--font-body)">Total 10 tahun</td>
+      <td>${jt(totalIpl)}</td>
+      <td>${jt(totalBeban)}</td>
+      <td>${jt(revTh * 10)}</td>
+      <td>${pct(avgPct)}</td>
+      <td style="color:${totalLaba >= 0 ? '#4ade80':'#ff6b6b'};font-weight:500">${totalLaba >= 0 ? '+':''}${jt(Math.abs(totalLaba))}</td>
+    </tr>`;
+    document.getElementById('tbl-body').innerHTML = html;
+
+    // Chart 1
+    if (ch1) ch1.destroy();
+    ch1 = new Chart(document.getElementById('chart1'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Akum. pendapatan (jt)', data: akumRev, borderColor: '#c8f04a', backgroundColor: 'rgba(200,240,74,0.06)', fill: true, tension: .35, pointRadius: 4, pointBackgroundColor: '#c8f04a', borderWidth: 2 },
+          { label: 'Akum. biaya sewa (jt)', data: akumSewa, borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.06)', fill: true, tension: .35, pointRadius: 4, pointBackgroundColor: '#ff6b6b', borderWidth: 2 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => 'Rp ' + c.raw + ' jt' } } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7a7870', font: { size: 11, family: 'DM Mono' } } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7a7870', font: { size: 11, family: 'DM Mono' }, callback: v => v + ' jt' } }
+        }
+      }
+    });
+
+    // Chart 2
+    if (ch2) ch2.destroy();
+    ch2 = new Chart(document.getElementById('chart2'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Beban sewa (%)',
+          data: pctArr,
+          backgroundColor: pctArr.map(v => v < 15 ? 'rgba(74,222,128,0.35)' : v < 25 ? 'rgba(255,181,71,0.35)' : 'rgba(255,107,107,0.35)'),
+          borderColor: pctArr.map(v => v < 15 ? '#4ade80' : v < 25 ? '#ffb547' : '#ff6b6b'),
+          borderWidth: 1,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.toFixed(1) + '% dari pendapatan' } } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7a7870', font: { size: 11, family: 'DM Mono' } } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#7a7870', font: { size: 11, family: 'DM Mono' }, callback: v => v + '%' }, max: 50, min: 0 }
+        },
+        annotation: {}
+      }
+    });
+
+    // Skema
+    const lunas   = totalBeban * 0.85;
+    const per5a   = (rows.slice(0, 5).reduce((a, r) => a + r.s, 0) + iplTahun * 5) * 0.93;
+    const per5b   = (rows.slice(5).reduce((a, r) => a + r.s, 0) + iplTahun * 5) * 0.93;
+    const perTh   = sewa1 + iplTahun;
+    document.getElementById('skema-grid').innerHTML = `
+      <div class="skema-card">
+        <div class="skema-label">Per tahun (aktif)</div>
+        <div class="skema-amount">${idr(perTh)}<br><span style="font-size:12px;color:var(--muted)">/tahun (sewa+IPL)</span></div>
+        <div class="skema-total">Total: ${jt(totalBeban)}</div>
+        <span class="badge badge-amber">Kas fleksibel</span>
+      </div>
+      <div class="skema-card recommended">
+        <div class="skema-label">Per 5 tahun · 2 tahap</div>
+        <div class="skema-amount">${jt(per5a)} + ${jt(per5b)}</div>
+        <div class="skema-total">Total: ${jt(per5a + per5b)} <span class="badge badge-green">Hemat ~7%</span></div>
+        <span class="badge badge-accent">Direkomendasikan</span>
+      </div>
+      <div class="skema-card">
+        <div class="skema-label">Lunas 10 tahun di awal</div>
+        <div class="skema-amount">${jt(lunas)}</div>
+        <div class="skema-total">Hemat ~15% vs /tahun</div>
+        <span class="badge badge-red">Modal besar</span>
+      </div>
+    `;
+
+    // Insights
+    const ins = [];
+    if (ratioPct < 15) {
+      ins.push({ type: 'g', icon: '✓', title: 'Beban sewa sangat ringan', body: `Dengan beban sewa ${pct(ratioPct)} dari pendapatan, kondisi keuangan sangat sehat. Ada ruang untuk meningkatkan luas atau lokasi di masa depan.` });
+    } else if (ratioPct < 25) {
+      ins.push({ type: 'a', icon: '!', title: 'Beban sewa moderat', body: `Beban ${pct(ratioPct)} masih dalam batas wajar. Target naikan pendapatan hingga sewa di bawah 20% untuk memperkuat margin.` });
+    } else {
+      ins.push({ type: 'r', icon: '!', title: 'Beban sewa berat', body: `Beban ${pct(ratioPct)} dari pendapatan cukup tinggi. Coba negosiasikan harga sewa atau tingkatkan pendapatan sebelum tanda tangan kontrak.` });
+    }
+    if (naik * 100 >= 7) {
+      ins.push({ type: 'a', icon: '↑', title: 'Eskalasi sewa tinggi', body: `Kenaikan ${pct(naik * 100)}/tahun akan membuat sewa tahun ke-10 jadi ${jt(sewa10)} — naik ${pct((sewa10 / sewa1 - 1) * 100)} dari awal. Negosiasikan cap maksimal 5%/tahun.` });
+    }
+    ins.push({ type: 'b', icon: 'i', title: 'Ekuivalen investasi', body: `Total sewa + IPL 10 tahun setara ${bepBln} bulan pendapatan bisnis atau ${(totalBeban / revTh).toFixed(1)} tahun pendapatan penuh — pastikan bisnis tetap profitabel sepanjang kontrak.` });
+
+    document.getElementById('insights').innerHTML = ins.map(i => `
+      <div class="insight insight-${i.type === 'g' ? 'g' : i.type === 'b' ? 'b' : 'a'}">
+        <div class="insight-icon">${i.icon}</div>
+        <div><strong>${i.title}</strong>${i.body}</div>
+      </div>
+    `).join('');
+  }
+
+  update();
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+async function downloadPDF() {
+  const btn = document.getElementById('pdf-btn');
+  btn.textContent = 'Menyiapkan PDF...';
+  btn.style.opacity = '0.6';
+  btn.style.pointerEvents = 'none';
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const PW = 210, PH = 297;
+  const MARGIN = 16;
+  const CW = PW - MARGIN * 2;
+
+  const luas   = +document.getElementById('s-luas').value;
+  const harga  = +document.getElementById('s-harga').value;
+  const naik   = +document.getElementById('s-naik').value;
+  const rev    = +document.getElementById('s-rev').value;
+  const ipl    = +document.getElementById('s-ipl').value;
+  const sewa1  = luas * harga * 12;
+  const iplTahun = ipl * luas * 12;
+  const revTh  = rev * 12;
+  const ops    = 2800000 * 12;
+  let totalSewa = 0, totalIpl = 0, rows = [];
+  for (let y = 1; y <= 10; y++) {
+    const s = Math.round(sewa1 * Math.pow(1 + naik/100, y-1));
+    totalSewa += s; totalIpl += iplTahun;
+    rows.push({ y, s, ipl: iplTahun, sisa: revTh - s - iplTahun - ops, pct: (s + iplTahun)/revTh*100 });
+  }
+  const totalBeban = totalSewa + totalIpl;
+  const sewa10 = Math.round(sewa1 * Math.pow(1+naik/100,9));
+  const avgPct = totalBeban/(revTh*10)*100;
+  const totalLaba = revTh*10 - totalBeban - ops*10;
+  const bepBln = Math.round(totalBeban/rev);
+
+  const idr = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+  const jt  = n => { if(n>=1e9) return 'Rp '+(n/1e9).toFixed(2)+' M'; if(n>=1e6) return 'Rp '+(n/1e6).toFixed(1)+' jt'; return idr(n); };
+  const pct = n => n.toFixed(1)+'%';
+  const nowStr = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+
+  function setFont(type='normal', size=10, color=[200,198,192]) {
+    pdf.setFont('helvetica', type);
+    pdf.setFontSize(size);
+    pdf.setTextColor(...color);
+  }
+  function drawRect(x,y,w,h,r=2,fill=[28,32,40],stroke=null) {
+    pdf.setFillColor(...fill);
+    if(stroke) pdf.setDrawColor(...stroke); else pdf.setDrawColor(...fill);
+    pdf.roundedRect(x,y,w,h,r,r, stroke ? 'FD' : 'F');
+  }
+  function headerBar(title, pageNum, total) {
+    pdf.setFillColor(13,15,18);
+    pdf.rect(0,0,PW,PH,'F');
+    pdf.setFillColor(20,23,28);
+    pdf.rect(0,0,PW,10,'F');
+    setFont('normal',8,[100,98,92]);
+    pdf.text('Simulasi Sewa Lahan Komersil · Kota Bandung', MARGIN, 6.5);
+    pdf.text(`Halaman ${pageNum} / ${total}`, PW-MARGIN, 6.5, {align:'right'});
+    pdf.setDrawColor(40,44,52);
+    pdf.setLineWidth(0.3);
+    pdf.line(0,10,PW,10);
+  }
+  function sectionTitle(text, y) {
+    setFont('bold',9,[200,240,74]);
+    pdf.text(text.toUpperCase(), MARGIN, y);
+    pdf.setDrawColor(200,240,74);
+    pdf.setLineWidth(0.5);
+    pdf.line(MARGIN, y+1.5, MARGIN+60, y+1.5);
+  }
+  function metricBox(x,y,w,h,label,value,sub=null,accent=false) {
+    drawRect(x,y,w,h,2, accent ? [18,30,18] : [28,32,40]);
+    if(accent) { pdf.setDrawColor(80,140,80); pdf.setLineWidth(0.4); pdf.roundedRect(x,y,w,h,2,2,'S'); }
+    setFont('normal',7,[100,98,92]); pdf.text(label.toUpperCase(), x+4, y+5.5);
+    setFont('bold',11, accent ? [200,240,74] : [220,218,212]); pdf.text(value, x+4, y+12);
+    if(sub) { setFont('normal',7,[100,98,92]); pdf.text(sub, x+4, y+16.5); }
+  }
+
+  const TOTAL_PAGES = 4;
+
+  // ─── PAGE 1: COVER + PARAMETER + RINGKASAN ────────────────────────────────
+  headerBar('', 1, TOTAL_PAGES);
+
+  // Accent bar top
+  pdf.setFillColor(200,240,74);
+  pdf.rect(MARGIN, 14, 3, 20, 'F');
+
+  setFont('bold',22,[232,230,224]);
+  pdf.text('Laporan Simulasi', MARGIN+7, 24);
+  setFont('bold',22,[200,240,74]);
+  pdf.text('Sewa Lahan Komersil', MARGIN+7, 33);
+  setFont('normal',9,[120,120,112]);
+  pdf.text('Kota Bandung  ·  Jalan Kolektor  ·  Kontrak 10 Tahun', MARGIN+7, 40);
+  setFont('normal',8,[80,78,72]);
+  pdf.text('Digenerate: '+nowStr, MARGIN+7, 46);
+
+  // Parameter card
+  let cy = 56;
+  drawRect(MARGIN, cy, CW, 46, 3, [20,23,28]);
+  pdf.setDrawColor(50,55,65); pdf.setLineWidth(0.3); pdf.roundedRect(MARGIN,cy,CW,46,3,3,'S');
+  sectionTitle('Parameter simulasi', cy+7);
+  const params = [
+    ['Luas lahan', luas.toLocaleString('id-ID')+' m²'],
+    ['Harga sewa/m²/tahun', idr(harga)],
+    ['Kenaikan sewa/tahun', naik+'%'],
+    ['Pendapatan bisnis/bulan', jt(rev)],
+    ['IPL/m²/bulan', idr(ipl)],
+    ['IPL total/bulan', jt(ipl*luas)],
+  ];
+  const col1 = params.slice(0,3), col2 = params.slice(3);
+  col1.forEach((p,i) => {
+    setFont('normal',8,[100,98,92]); pdf.text(p[0], MARGIN+6, cy+16+i*9);
+    setFont('bold',8,[220,218,212]); pdf.text(p[1], MARGIN+6+52, cy+16+i*9);
+  });
+  col2.forEach((p,i) => {
+    setFont('normal',8,[100,98,92]); pdf.text(p[0], MARGIN+CW/2+4, cy+16+i*9);
+    setFont('bold',8,[220,218,212]); pdf.text(p[1], MARGIN+CW/2+4+52, cy+16+i*9);
+  });
+
+  // Ringkasan metrics 2x2
+  cy = 110;
+  sectionTitle('Ringkasan keuangan', cy);
+  cy += 5;
+  const mw = (CW-6)/2, mh = 22;
+  metricBox(MARGIN,     cy,     mw, mh, 'Sewa tahun ke-1', jt(sewa1), idr(sewa1)+'/th', true);
+  metricBox(MARGIN+mw+6,cy,     mw, mh, 'IPL / bulan total', jt(ipl*luas), idr(ipl*luas)+'/bln');
+  cy += mh+4;
+  metricBox(MARGIN,     cy,     mw, mh, 'Sewa tahun ke-10', jt(sewa10), 'setelah eskalasi '+naik+'%/th');
+  metricBox(MARGIN+mw+6,cy,     mw, mh, 'Total beban 10 tahun', jt(totalBeban), 'Sewa + IPL');
+  cy += mh+4;
+  metricBox(MARGIN,     cy,     mw, mh, 'Ekuivalen bulan kerja', bepBln+' bulan', 'dari pendapatan bisnis');
+  metricBox(MARGIN+mw+6,cy,     mw, mh, 'Estimasi laba bersih 10 th', (totalLaba>=0?'+':'')+jt(Math.abs(totalLaba)), totalLaba>=0?'surplus':'defisit');
+  cy += mh+4;
+
+  // Kelayakan bar
+  sectionTitle('Kelayakan beban sewa th-1', cy+2);
+  cy += 8;
+  const ratioPct = (sewa1+iplTahun)/revTh*100;
+  const barColor = ratioPct<15 ? [74,222,128] : ratioPct<25 ? [255,181,71] : [255,107,107];
+  const statusTxt = ratioPct<15 ? 'Ringan — sangat layak' : ratioPct<25 ? 'Sedang — perlu monitor' : 'Berat — tingkatkan volume';
+  drawRect(MARGIN, cy, CW, 5, 1, [40,44,52]);
+  const fillW = Math.min(ratioPct/50, 1)*CW;
+  pdf.setFillColor(...barColor);
+  pdf.roundedRect(MARGIN, cy, fillW, 5, 1, 1, 'F');
+  setFont('bold',9, barColor); pdf.text(pct(ratioPct), MARGIN, cy+12);
+  setFont('normal',8,[160,158,152]); pdf.text(statusTxt, MARGIN+16, cy+12);
+
+  // Footer note
+  setFont('normal',7,[60,58,54]);
+  pdf.text('Data estimasi — bukan saran investasi resmi. Angka aktual bergantung kondisi negosiasi lapangan.', MARGIN, PH-8);
+
+  // ─── PAGE 2: TABEL RINCIAN ─────────────────────────────────────────────────
+  pdf.addPage();
+  headerBar('', 2, TOTAL_PAGES);
+
+  cy = 18;
+  sectionTitle('Rincian sewa & proyeksi per tahun', cy);
+  cy += 8;
+
+  // Table header
+  const cols = [14, 34, 14, 30, 30, 30, 16, 30];
+  const heads = ['Tahun','Sewa/tahun','Naik','IPL/tahun','Akum. beban','Pendapatan','%','Sisa laba'];
+  drawRect(MARGIN, cy, CW, 7, 1, [30,34,42]);
+  let cx = MARGIN+2;
+  heads.forEach((h,i) => {
+    setFont('bold',6.5,[160,158,150]);
+    pdf.text(h, cx, cy+4.5);
+    cx += cols[i];
+  });
+  cy += 7;
+
+  rows.forEach((r,idx) => {
+    const bg = idx%2===0 ? [20,23,28] : [24,28,36];
+    drawRect(MARGIN, cy, CW, 8, 0, bg);
+    cx = MARGIN+2;
+    const vals = [
+      'Th '+r.y,
+      idr(r.s),
+      idx===0?'—':'+'+naik+'%',
+      jt(r.ipl),
+      jt(rows.slice(0,idx+1).reduce((a,x)=>a+x.s,0)+iplTahun*(idx+1)),
+      jt(revTh),
+      pct(r.pct),
+      (r.sisa>=0?'+':'')+jt(Math.abs(r.sisa)),
+    ];
+    const colors = [
+      [160,200,255],[220,218,212],[120,118,112],[160,158,152],[220,218,212],[160,158,152],
+      r.pct<15?[74,222,128]:r.pct<25?[255,181,71]:[255,107,107],
+      r.sisa>=0?[74,222,128]:[255,107,107]
+    ];
+    vals.forEach((v,i) => {
+      setFont('normal',7,colors[i]);
+      pdf.text(v, cx, cy+5); cx += cols[i];
+    });
+    cy += 8;
+  });
+
+  // Total row
+  drawRect(MARGIN, cy, CW, 9, 1, [34,40,50]);
+  pdf.setDrawColor(80,90,110); pdf.setLineWidth(0.3); pdf.roundedRect(MARGIN,cy,CW,9,1,1,'S');
+  cx = MARGIN+2;
+  const totVals = ['TOTAL','—','—',jt(totalIpl),jt(totalBeban),jt(revTh*10),pct(avgPct),(totalLaba>=0?'+':'')+jt(Math.abs(totalLaba))];
+  const totColors = [[200,240,74],[120,118,112],[120,118,112],[160,158,152],[200,240,74],[160,158,152],[200,240,74],totalLaba>=0?[74,222,128]:[255,107,107]];
+  totVals.forEach((v,i) => {
+    setFont('bold',7.5,totColors[i]);
+    pdf.text(v, cx, cy+5.5); cx += cols[i];
+  });
+  cy += 18;
+
+  // Skema pembayaran
+  sectionTitle('Perbandingan skema pembayaran', cy);
+  cy += 8;
+  const lunas = totalBeban*0.85;
+  const per5a = (rows.slice(0,5).reduce((a,r)=>a+r.s,0)+iplTahun*5)*0.93;
+  const per5b = (rows.slice(5).reduce((a,r)=>a+r.s,0)+iplTahun*5)*0.93;
+  const perTh  = sewa1+iplTahun;
+  const skemas = [
+    { label:'Per tahun', val:idr(perTh)+'/th', total:'Total: '+jt(totalBeban), note:'Kas fleksibel', color:[255,181,71] },
+    { label:'Per 5 tahun (2 tahap) ★', val:jt(per5a)+' + '+jt(per5b), total:'Total: '+jt(per5a+per5b)+' (hemat ~7%)', note:'Direkomendasikan', color:[200,240,74] },
+    { label:'Lunas 10 tahun di awal', val:jt(lunas), total:'Hemat ~15% vs per tahun', note:'Modal besar', color:[255,107,107] },
+  ];
+  const sw = (CW-8)/3;
+  skemas.forEach((s,i) => {
+    const sx = MARGIN+i*(sw+4);
+    const isRec = i===1;
+    drawRect(sx,cy,sw,28,2, isRec?[18,28,18]:[24,28,36]);
+    if(isRec){pdf.setDrawColor(80,140,60);pdf.setLineWidth(0.5);pdf.roundedRect(sx,cy,sw,28,2,2,'S');}
+    setFont('bold',7.5,s.color); pdf.text(s.label, sx+3, cy+6);
+    setFont('bold',8.5,[220,218,212]); pdf.text(s.val, sx+3, cy+13);
+    setFont('normal',7,[120,118,112]); pdf.text(s.total, sx+3, cy+19);
+    setFont('normal',7,s.color); pdf.text(s.note, sx+3, cy+24.5);
+  });
+
+  setFont('normal',7,[60,58,54]);
+  pdf.text('Data estimasi — bukan saran investasi resmi.', MARGIN, PH-8);
+
+  // ─── PAGE 3: GRAFIK ────────────────────────────────────────────────────────
+  pdf.addPage();
+  headerBar('', 3, TOTAL_PAGES);
+
+  cy = 18;
+  sectionTitle('Grafik akumulasi biaya sewa vs pendapatan', cy);
+  cy += 6;
+
+  // Capture chart1
+  try {
+    const c1 = document.getElementById('chart1');
+    const img1 = await html2canvas(c1, { backgroundColor:'#14171c', scale:2, logging:false });
+    const d1 = img1.toDataURL('image/png');
+    drawRect(MARGIN, cy, CW, 68, 3, [20,23,28]);
+    pdf.addImage(d1,'PNG', MARGIN+2, cy+2, CW-4, 64);
+    cy += 72;
+  } catch(e) { cy += 8; }
+
+  sectionTitle('Grafik beban sewa sebagai % pendapatan per tahun', cy);
+  cy += 6;
+
+  try {
+    const c2 = document.getElementById('chart2');
+    const img2 = await html2canvas(c2, { backgroundColor:'#14171c', scale:2, logging:false });
+    const d2 = img2.toDataURL('image/png');
+    drawRect(MARGIN, cy, CW, 56, 3, [20,23,28]);
+    pdf.addImage(d2,'PNG', MARGIN+2, cy+2, CW-4, 52);
+    cy += 60;
+  } catch(e) { cy += 8; }
+
+  // Legend
+  setFont('normal',8,[100,98,92]);
+  pdf.text('Keterangan:', MARGIN, cy+6);
+  pdf.setFillColor(200,240,74); pdf.rect(MARGIN+24,cy+2,8,3,'F');
+  setFont('normal',7,[160,158,152]); pdf.text('Akum. pendapatan', MARGIN+34, cy+5.5);
+  pdf.setFillColor(255,107,107); pdf.rect(MARGIN+80,cy+2,8,3,'F');
+  pdf.text('Akum. biaya sewa+IPL', MARGIN+90, cy+5.5);
+
+  setFont('normal',7,[60,58,54]);
+  pdf.text('Data estimasi — bukan saran investasi resmi.', MARGIN, PH-8);
+
+  // ─── PAGE 4: ANALISIS & CATATAN ───────────────────────────────────────────
+  pdf.addPage();
+  headerBar('', 4, TOTAL_PAGES);
+
+  cy = 18;
+  sectionTitle('Analisis & rekomendasi', cy);
+  cy += 8;
+
+  const insights = [];
+  if(ratioPct<15) insights.push({ icon:'✓', title:'Beban sewa sangat ringan', body:`Dengan beban sewa ${pct(ratioPct)} dari pendapatan, kondisi keuangan sangat sehat. Ada ruang untuk meningkatkan luas atau memilih lokasi premium di masa depan.`, color:[74,222,128] });
+  else if(ratioPct<25) insights.push({ icon:'!', title:'Beban sewa moderat', body:`Beban ${pct(ratioPct)} masih dalam batas wajar. Targetkan kenaikan pendapatan hingga rasio sewa turun di bawah 20% untuk memperkuat margin.`, color:[255,181,71] });
+  else insights.push({ icon:'!', title:'Beban sewa berat', body:`Beban ${pct(ratioPct)} dari pendapatan cukup tinggi. Pertimbangkan negosiasi harga sewa atau tingkatkan pendapatan sebelum tanda tangan kontrak.`, color:[255,107,107] });
+
+  if(naik>=7) insights.push({ icon:'↑', title:'Eskalasi sewa tinggi', body:`Kenaikan ${naik}%/tahun akan membuat sewa tahun ke-10 menjadi ${jt(sewa10)} — naik ${pct((sewa10/sewa1-1)*100)} dari nilai awal. Negosiasikan cap maksimal 5%/tahun untuk melindungi margin jangka panjang.`, color:[255,181,71] });
+
+  insights.push({ icon:'i', title:'Ekuivalen investasi', body:`Total sewa + IPL selama 10 tahun setara ${bepBln} bulan pendapatan bisnis atau ${(totalBeban/revTh).toFixed(1)} tahun pendapatan penuh. Pastikan bisnis tetap profitabel sepanjang masa kontrak dan siapkan rencana kontingensi.`, color:[74,158,255] });
+  insights.push({ icon:'★', title:'Tips negosiasi untuk Bandung', body:'(1) Minta klausul eskalasi sewa maksimal 5%/tahun tertulis di kontrak. (2) Negosiasikan hak opsi perpanjangan 5 tahun berikutnya dengan harga yang sudah disepakati di awal. (3) Minta klausul renegosiasi di tahun ke-5. (4) Pastikan IPL tercantum nominal dan mekanisme kenaikannya secara eksplisit.', color:[200,240,74] });
+
+  insights.forEach(ins => {
+    const ih = 28;
+    drawRect(MARGIN, cy, CW, ih, 2, [24,28,36]);
+    pdf.setDrawColor(...ins.color.map(c=>Math.min(c+30,255)));
+    pdf.setLineWidth(0.4);
+    pdf.line(MARGIN, cy, MARGIN, cy+ih);
+    setFont('bold',9,ins.color); pdf.text(ins.icon+' '+ins.title, MARGIN+5, cy+7);
+    setFont('normal',8,[160,158,152]);
+    const lines = pdf.splitTextToSize(ins.body, CW-10);
+    lines.slice(0,3).forEach((l,li) => pdf.text(l, MARGIN+5, cy+13+li*5));
+    cy += ih+4;
+  });
+
+  cy += 4;
+  sectionTitle('Ringkasan eksekutif', cy);
+  cy += 8;
+  drawRect(MARGIN, cy, CW, 38, 3, [20,23,28]);
+  const exRows = [
+    ['Parameter','Nilai','Keterangan'],
+    ['Sewa th-1 / th-10', jt(sewa1)+' / '+jt(sewa10), 'Selisih: '+pct((sewa10/sewa1-1)*100)],
+    ['IPL total / bulan', jt(ipl*luas), idr(ipl)+'/m²/bulan × '+luas.toLocaleString('id-ID')+' m²'],
+    ['Total beban 10 th', jt(totalBeban), 'Sewa+IPL gabungan'],
+    ['Rata-rata beban %', pct(avgPct), ratioPct<15?'Ringan':ratioPct<25?'Sedang':'Berat'],
+    ['Est. laba bersih 10 th', (totalLaba>=0?'+':'')+jt(Math.abs(totalLaba)), totalLaba>=0?'Surplus — layak diteruskan':'Defisit — review parameter'],
+  ];
+  exRows.forEach((r,i) => {
+    const ey = cy+5+i*6;
+    if(i===0){ setFont('bold',7,[120,118,110]); } else { setFont('normal',7, i%2===0?[140,138,130]:[160,158,152]); }
+    pdf.text(r[0], MARGIN+4, ey);
+    pdf.text(r[1], MARGIN+70, ey);
+    setFont('normal',7,[100,98,92]); pdf.text(r[2], MARGIN+120, ey);
+  });
+
+  setFont('normal',7,[60,58,54]);
+  pdf.text('Simulasi Sewa Lahan Komersil · Kota Bandung · '+nowStr+' · Data estimasi, bukan saran investasi resmi.', MARGIN, PH-8);
+
+  pdf.save('laporan-sewa-lahan-bandung-'+new Date().toISOString().slice(0,10)+'.pdf');
+
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Unduh laporan PDF';
+  btn.style.opacity='1'; btn.style.pointerEvents='auto';
+}
+</script>
+</body>
+</html>
